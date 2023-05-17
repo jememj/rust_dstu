@@ -1,56 +1,35 @@
-use bevy::prelude::*;
+use actix_web::{web, App, HttpServer, HttpResponse, Responder};
+// use sqlx::{postgres::PgPoolOptions, Pool, Postgres};
+// use dotenv::dotenv;
 
-use std::f32::consts::TAU;
-
-fn main() {
-    App::new()
-        .add_plugins(DefaultPlugins)
-        .add_startup_system(setup)
-        .add_system(rotate_cube)
-        .run();
+// mod services;
+// use services::{fetch_data};
+async fn index() -> impl Responder {
+    HttpResponse::Ok().body(include_str!("front/index.html"))
 }
+use actix_files as fs;
+// pub struct AppState {
+//     db: Pool<Postgres>
+// }
+#[actix_web::main]
+async fn main() -> std::io::Result<()> {
+    // dotenv().ok();
+    // let database_url = std::env::var("DATABASE_URL").expect("DATABASE_URL must be set");
+    // let pool = PgPoolOptions::new()
+    // .max_connections(5)
+    // .connect(&database_url)
+    // .await
+    // .expect("Error building a connection pool");
 
-#[derive(Component)]
-struct Rotatable {
-    speed: f32,
-}
-fn setup(
-    mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
-    asset_server: Res<AssetServer>
-) {
-    commands.spawn(PbrBundle {
-        mesh: meshes.add(shape::Plane::from_size(5.0).into()),
-        material: materials.add(Color::rgb(5.0, 255.0, 255.0).into()),
-        ..default()
-    });
-    commands.spawn((PbrBundle {
-        mesh: meshes.add(Mesh::from(shape::Cube { size: 1.0 })),
-        material: materials.add(Color::rgb(109.0, 101.0, 82.0).into()),
-        // scene: asset_server.load("cube.gltf#Scene0"),
-        // transform: Transform::from_xyz(0.0, 0.5, 0.0),
-        transform: Transform::from_translation(Vec3::ZERO),
-        // material: materials.add(Color::rgb(1., 1., 1.).into()),
-        ..default()
-    }, Rotatable { speed: 0.3 }));
-    commands.spawn(PointLightBundle {
-        point_light: PointLight {
-            intensity: 1500.0,
-            shadows_enabled: true,
-            ..default()
-        },
-        transform: Transform::from_xyz(4.0, 8.0, 4.0),
-        ..default()
-    });
-    commands.spawn(Camera3dBundle {
-        transform: Transform::from_xyz(0.0, 2.5, 4.0).looking_at(Vec3::ZERO, Vec3::Y),
-        ..default()
-    });
-}
-
-fn rotate_cube(mut cubes: Query<(&mut Transform, &Rotatable)>, timer: Res<Time>) {
-    for (mut transform, cube) in &mut cubes {
-        transform.rotate_y(cube.speed * TAU * timer.delta_seconds());
-    }
+    HttpServer::new(|| 
+        App::new()
+            .route("/", web::get().to(index))
+            .service(fs::Files::new("/static", "./").show_files_listing())
+            // .app_data(Data::new(AppState { db: pool.clone() }))
+            // .service(fetch_data)
+    )
+    .bind("127.0.0.1:8080")
+    .unwrap()
+    .run()
+    .await
 }
